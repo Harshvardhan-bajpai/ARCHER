@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n-key="title">Station 1 - Control Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .emergency-btn {
+            background: linear-gradient(45deg, #ff4757, #ff3838);
+            border: none;
+            padding: 25px 50px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: white;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(255, 71, 87, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            min-width: 300px;
+        }
+
+        .emergency-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(255, 71, 87, 0.4);
+            background: linear-gradient(45deg, #ff3838, #ff2818);
+        }
+
+        .emergency-btn:active {
+            transform: translateY(0);
+        }
+
+        .report-btn {
+            background: linear-gradient(45deg, #5352ed, #3742fa);
+            border: none;
+            padding: 20px 40px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(83, 82, 237, 0.3);
+            min-width: 250px;
+        }
+
+        .report-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(83, 82, 237, 0.4);
+            background: linear-gradient(45deg, #3742fa, #2f32fa);
+        }
+
+        .report-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-content h2 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 16px;
+            resize: vertical;
+            margin-bottom: 20px;
+        }
+
+        .modal-content textarea:focus {
+            outline: none;
+            border-color: #5352ed;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .submit-btn, .cancel-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn {
+            background: #5352ed;
+            color: white;
+        }
+
+        .submit-btn:hover {
+            background: #3742fa;
+        }
+
+        .cancel-btn {
+            background: #ddd;
+            color: #666;
+        }
+
+        .cancel-btn:hover {
+            background: #ccc;
+        }
+
+        .status-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .status-message.show {
+            opacity: 1;
+        }
+
+        .status-message.success {
+            background: #2ed573;
+        }
+
+        .status-message.error {
+            background: #ff4757;
+        }
+
+        .rover-alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a0000;
+            padding: 30px 40px;
+            border-radius: 16px;
+            color: #fff;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(255, 50, 50, 0.6),
+                        0 0 40px rgba(255, 20, 20, 0.4);
+            overflow: hidden;
+            z-index: 2000;
+            display: none;
+        }
+
+        .rover-alert::before {
+            content: "";
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(
+                60deg,
+                #ff5252,
+                #ff1744,
+                #d50000,
+                #ff1744,
+                #ff5252
+            );
+            background-size: 400% 400%;
+            border-radius: 18px;
+            z-index: -1;
+            animation: borderShift 4s ease infinite;
+        }
+
+        @keyframes borderShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .rover-alert .rover-icon {
+            font-size: 4rem;
+            margin-bottom: 10px;
+            animation: iconPulse 1s infinite alternate;
+        }
+
+        @keyframes iconPulse {
+            from { transform: scale(1); }
+            to   { transform: scale(1.2); }
+        }
+
+        .rover-alert .rover-title {
+            font-size: 2.2rem;
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(255, 20, 20, 0.8);
+        }
+
+        .rover-alert .rover-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.85;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .firstaid-alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #001a00;
+            padding: 30px 40px;
+            border-radius: 16px;
+            color: #fff;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(50, 255, 50, 0.6),
+                        0 0 40px rgba(20, 255, 20, 0.4);
+            overflow: hidden;
+            z-index: 2000;
+            display: none;
+        }
+
+        .firstaid-alert::before {
+            content: "";
+            position: absolute;
+            top: -2px; left: -2px; right: -2px; bottom: -2px;
+            background: linear-gradient(
+                60deg,
+                #2ed573,
+                #28c76f,
+                #1abc9c,
+                #28c76f,
+                #2ed573
+            );
+            background-size: 400% 400%;
+            border-radius: 18px;
+            z-index: -1;
+            animation: borderShiftGreen 4s ease infinite;
+        }
+
+        @keyframes borderShiftGreen {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .firstaid-alert .firstaid-icon {
+            font-size: 4rem;
+            margin-bottom: 10px;
+            animation: iconPulseGreen 1s infinite alternate;
+        }
+
+        @keyframes iconPulseGreen {
+            from { transform: scale(1); }
+            to   { transform: scale(1.2); }
+        }
+
+        .firstaid-alert .firstaid-title {
+            font-size: 2.2rem;
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(20, 255, 20, 0.8);
+        }
+
+        .firstaid-alert .firstaid-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.85;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .language-toggle {
+            position: fixed;
+            bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: rgba(0,0,0,0.2);
+            padding: 6px 16px;
+            border-radius: 24px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+        }
+
+        .language-toggle .label {
+            font-weight: bold;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: green;
+            transition: 0.4s;
+            border-radius: 28px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: red;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        #keyboard {
+            margin-top: 10px;
+            display: none;
+            background: #222;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 100%;
+        }
+        .key-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+        .key-button {
+            background: #444;
+            color: white;
+            border: none;
+            margin: 3px;
+            padding: 15px;
+            font-size: 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 40px;
+        }
+        .key-button:hover {
+            background: #666;
+        }
+        .wide {
+            width: 80px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2 data-i18n-key="header_sub" style="margin-bottom:20px ;">Active Response & Control Hub for Emergency Reconnaissance</h2>
+        <h1 data-i18n-key="header_main1">ARCHER</h1>
+        <h1 data-i18n-key="header_main2">STATION 1</h1>
+    </div>
+
+    <div class="button-container">
+        <button class="emergency-btn" onclick="triggerEmergency()" data-i18n-key="btn_emergency">
+            🚨 EMERGENCY 🚨
+        </button>
+
+        <button class="report-btn" style="background: linear-gradient(45deg, #2ed573, #1dd1a1);" onclick="requestFirstaid()" data-i18n-key="btn_firstaid">
+            🏥 Request First Aid
+        </button>
+
+        <button class="report-btn" onclick="openReportModal()" data-i18n-key="btn_report">
+            📝 Report Crime
+        </button>
+    </div>
+
+    <div class="report-modal" id="reportModal">
+        <div class="modal-content">
+            <h2 data-i18n-key="modal_title">Submit Crime Report</h2>
+            <textarea id="reportText"
+                      data-i18n-key="modal_placeholder"
+                      placeholder="Describe the incident or crime you want to report..."
+                      onclick="showKeyboard()"></textarea>
+            <div id="keyboard">
+                <div class="key-row">
+                    <button class="key-button" onclick="insertChar('Q')">Q</button>
+                    <button class="key-button" onclick="insertChar('W')">W</button>
+                    <button class="key-button" onclick="insertChar('E')">E</button>
+                    <button class="key-button" onclick="insertChar('R')">R</button>
+                    <button class="key-button" onclick="insertChar('T')">T</button>
+                    <button class="key-button" onclick="insertChar('Y')">Y</button>
+                    <button class="key-button" onclick="insertChar('U')">U</button>
+                    <button class="key-button" onclick="insertChar('I')">I</button>
+                    <button class="key-button" onclick="insertChar('O')">O</button>
+                    <button class="key-button" onclick="insertChar('P')">P</button>
+                </div>
+                <div class="key-row">
+                    <button class="key-button" onclick="insertChar('A')">A</button>
+                    <button class="key-button" onclick="insertChar('S')">S</button>
+                    <button class="key-button" onclick="insertChar('D')">D</button>
+                    <button class="key-button" onclick="insertChar('F')">F</button>
+                    <button class="key-button" onclick="insertChar('G')">G</button>
+                    <button class="key-button" onclick="insertChar('H')">H</button>
+                    <button class="key-button" onclick="insertChar('J')">J</button>
+                    <button class="key-button" onclick="insertChar('K')">K</button>
+                    <button class="key-button" onclick="insertChar('L')">L</button>
+                </div>
+                <div class="key-row">
+                    <button class="key-button" onclick="insertChar('Z')">Z</button>
+                    <button class="key-button" onclick="insertChar('X')">X</button>
+                    <button class="key-button" onclick="insertChar('C')">C</button>
+                    <button class="key-button" onclick="insertChar('V')">V</button>
+                    <button class="key-button" onclick="insertChar('B')">B</button>
+                    <button class="key-button" onclick="insertChar('N')">N</button>
+                    <button class="key-button" onclick="insertChar('M')">M</button>
+                </div>
+                <div class="key-row">
+                    <button class="key-button wide" onclick="insertChar(' ')">Space</button>
+                    <button class="key-button" onclick="backspace()">⌫</button>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="submit-btn" onclick="submitReport()" data-i18n-key="btn_submit">Submit Report</button>
+                <button class="cancel-btn" onclick="closeReportModal()" data-i18n-key="btn_cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-message" id="statusMessage"></div>
+
+    <div class="rover-alert" id="roverAlert">
+        <div class="rover-icon">⚠️</div>
+        <div class="rover-title" data-i18n-key="alert_title">LAUNCHING ROVER</div>
+        <div class="rover-subtitle" data-i18n-key="alert_sub">please step back</div>
+    </div>
+
+    <div class="firstaid-alert" id="firstaidAlert">
+        <div class="firstaid-icon">⚕️</div>
+        <div class="firstaid-title">DROPPING FIRSTAID</div>
+        <div class="firstaid-subtitle">please stand clear</div>
+    </div>
+
+    <div class="language-toggle">
+        <span class="label english" style="color: #64ff5c;">English</span>
+        <label class="switch">
+            <input type="checkbox" id="langSwitch">
+            <span class="slider"></span>
+        </label>
+        <span class="label hindi" style="color: #fe5151;">हिन्दी</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        const translations = {
+            en: {
+                title:               'Station 1 - Control Panel',
+                header_sub:          'Active Response & Control Hub for Emergency Reconnaissance',
+                header_main1:        'ARCHER',
+                header_main2:        'STATION 1',
+                btn_emergency:       '🚨 EMERGENCY 🚨',
+                btn_report:          '📝 Report Crime',
+                btn_firstaid:        '🏥 Request First Aid',
+                modal_title:         'Submit Crime Report',
+                modal_placeholder:   'Describe the incident or crime you want to report...',
+                btn_submit:          'Submit Report',
+                btn_cancel:          'Cancel',
+                alert_title:         'LAUNCHING ROVER',
+                alert_sub:           'please step back',
+                status_emergency_ok: 'Emergency alert sent!',
+                status_emergency_er: 'Error sending emergency alert',
+                status_report_ok:    'Report submitted successfully!',
+                status_report_er:    'Error submitting report'
+            },
+            hi: {
+                title:               'स्टेशन 1 - नियंत्रण पैनल',
+                header_sub:          'आपात स्थिति पुनरावलोकन एवं नियंत्रण केंद्र',
+                header_main1:        'आर्चर',
+                header_main2:        'स्टेशन 1',
+                btn_emergency:       '🚨 आपातकाल 🚨',
+                btn_report:          '📝 अपराध रिपोर्ट',
+                btn_firstaid:        '🏥 प्राथमिक चिकित्सा अनुरोध',
+                modal_title:         'अपराध रिपोर्ट सबमिट करें',
+                modal_placeholder:   'उस घटना या अपराध का वर्णन करें जिसे आप रिपोर्ट करना चाहते हैं...',
+                btn_submit:          'रिपोर्ट सबमिट करें',
+                btn_cancel:          'रद्द करें',
+                alert_title:         'रोवर प्रक्षेपण हो रहा है',
+                alert_sub:           'कृपया पीछे हटें',
+                status_emergency_ok: 'आपातकालीन अलर्ट भेजा गया!',
+                status_emergency_er: 'अलर्ट भेजने में त्रुटि',
+                status_report_ok:    'रिपोर्ट सफलतापूर्वक सबमिट हुई!',
+                status_report_er:    'रिपोर्ट सबमिट करने में त्रुटि'
+            }
+        };
+
+        function applyTranslations(lang) {
+            document.querySelectorAll('[data-i18n-key]').forEach(el => {
+                const key = el.getAttribute('data-i18n-key');
+                const txt = translations[lang][key];
+                if (!txt) return;
+                if (el.tagName.toLowerCase() === 'textarea') {
+                    el.placeholder = txt;
+                } else if (el.tagName.toLowerCase() === 'title') {
+                    document.title = txt;
+                } else {
+                    el.textContent = txt;
+                }
+            });
+        }
+
+        function showStatus(messageKey, type) {
+            const msg = translations[currentLang][messageKey];
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = msg;
+            statusEl.className = 'status-message ' + type + ' show';
+            setTimeout(() => statusEl.classList.remove('show'), 3000);
+        }
+
+        let currentLang = 'en';
+
+        const socket = io();
+
+        socket.on('rover_launching', () =>
+            document.getElementById('roverAlert').style.display = 'block'
+        );
+        socket.on('rover_launch_complete', () =>
+            document.getElementById('roverAlert').style.display = 'none'
+        );
+
+        socket.on('firstaid_dropping', () => {
+            document.getElementById('firstaidAlert').style.display = 'block';
+        });
+        socket.on('firstaid_drop_complete', () => {
+            document.getElementById('firstaidAlert').style.display = 'none';
+        });
+
+        function triggerEmergency() {
+            fetch('/emergency', { method: 'POST', headers: { 'Content-Type':'application/json' } })
+            .then(r => r.json())
+            .then(() => showStatus('status_emergency_ok','success'))
+            .catch(() => showStatus('status_emergency_er','error'));
+        }
+
+        function requestFirstaid() {
+            fetch('/request_firstaid', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(r => r.json())
+            .then(() => showStatus('status_emergency_ok','success'))
+            .catch(() => showStatus('status_emergency_er','error'));
+        }
+
+        function openReportModal() {
+            document.getElementById('reportModal').style.display = 'block';
+
+            fetch('/open_keyboard', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => console.log(data.status))
+                .catch(err => console.error('Keyboard launch failed:', err));
+        }
+        function closeReportModal() {
+            document.getElementById('reportModal').style.display = 'none';
+            document.getElementById('reportText').value = '';
+        }
+
+        function submitReport() {
+            const reportText = document.getElementById('reportText').value.trim();
+            if (!reportText) {
+                showStatus('status_report_er','error');
+                return;
+            }
+            fetch('/report', {
+                method: 'POST',
+                headers: { 'Content-Type':'application/json' },
+                body: JSON.stringify({ report: reportText })
+            })
+            .then(r => r.json())
+            .then(() => { showStatus('status_report_ok','success'); closeReportModal(); })
+            .catch(() => showStatus('status_report_er','error'));
+        }
+
+        function insertChar(char) {
+            const textarea = document.getElementById("reportText");
+            textarea.value += char;
+        }
+        function backspace() {
+            const textarea = document.getElementById("reportText");
+            textarea.value = textarea.value.slice(0, -1);
+        }
+        function showKeyboard() {
+            document.getElementById("keyboard").style.display = "block";
+        }
+
+        window.onclick = e => {
+            if (e.target === document.getElementById('reportModal')) {
+                closeReportModal();
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTranslations(currentLang);
+            document.getElementById('langSwitch').addEventListener('change', function() {
+                currentLang = this.checked ? 'hi' : 'en';
+                applyTranslations(currentLang);
+            });
+        });
+    </script>
+</body>
+</html>

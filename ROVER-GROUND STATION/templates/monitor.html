@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Emergency Monitoring Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <style>
+    *, *::before, *::after {
+      margin: 0; padding: 0; box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+    body {
+      display: flex; flex-direction: column;
+      font-family: Arial, sans-serif;
+      background: #1a1a1a; color: #fff;
+      overflow: hidden;
+    }
+
+    .header {
+      flex: 0 0 auto;
+      background: linear-gradient(135deg, #2c3e50, #34495e);
+      padding: 1rem; text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .header h1 {
+      font-size: clamp(1.5rem, 4vw, 2.5rem);
+      margin-bottom: 0.3rem;
+    }
+    .header p, .header h2 {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      opacity: 0.8;
+    }
+
+    .status-indicator {
+      position: absolute; top: 1rem; right: 1rem;
+      padding: 0.5rem 1rem; border-radius: 1rem;
+      font-weight: bold; font-size: 0.9rem;
+    }
+    .status-indicator.connected   { background: #27ae60; }
+    .status-indicator.disconnected{ background: #e74c3c; }
+
+    .dashboard {
+      flex: 1 1 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem; padding: 1.5rem;
+      overflow-y: auto;
+    }
+    @media (min-width: 1200px) {
+      .dashboard { padding: 2rem; gap: 2rem; }
+    }
+
+    .emergency-panel, .reports-panel {
+      display: flex; flex-direction: column;
+      background: #2c2c2c; border-radius: 0.75rem;
+      padding: 1.5rem; box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+    .panel-title {
+      text-align: center;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      margin-bottom: 1rem;
+      color: #ecf0f1;
+    }
+
+    .emergency-status {
+      flex: 1 1 auto;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; transition: all 0.5s ease;
+    }
+    .emergency-status.normal   { color: #27ae60; }
+    .emergency-status.alert {
+      color: #e74c3c; animation: pulse 1s infinite;
+    }
+    .emergency-message {
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: bold; margin-bottom: 1rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    .emergency-time, .normal-status {
+      font-size: clamp(1.2rem, 3vw, 1.5rem);
+      opacity: 0.8;
+    }
+    @keyframes pulse {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .reports-container {
+      flex: 1 1 auto; overflow-y: auto; padding-right: 0.75rem;
+    }
+    .report-item {
+      background: #3c3c3c; border-radius: 0.5rem;
+      padding: 1rem; margin-bottom: 1rem;
+      border-left: 5px solid #3498db;
+      animation: slideIn 0.4s ease;
+    }
+    .report-header {
+      display: flex; justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+    .report-title { font-size: 1.25rem; font-weight: bold; color: #3498db; }
+    .report-time  { font-size: 1rem; opacity: 0.7; }
+    .report-text  { font-size: 1.1rem; line-height: 1.5; color: #ecf0f1; }
+    .no-reports {
+      text-align: center; font-style: italic;
+      opacity: 0.6; padding: 1rem; font-size: 1.1rem;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-15px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .clear-btn {
+      align-self: center; margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      background: #e74c3c; border: none;
+      border-radius: 0.5rem; font-size: 1rem;
+      cursor: pointer; transition: background 0.3s ease;
+    }
+    .clear-btn:hover { background: #c0392b; }
+
+    .rover-controls, .firstaid-controls {
+      margin-top: 1.5rem; border-top: 1px solid #444;
+      padding-top: 1rem; text-align: center;
+    }
+    .rover-btn, .firstaid-btn {
+      padding: 0.75rem 1.5rem;
+      border: none; border-radius: 0.5rem;
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      font-weight: bold; cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .rover-btn {
+      background: linear-gradient(45deg, #f39c12, #e67e22);
+    }
+    .rover-btn:hover {
+      background: linear-gradient(45deg, #e67e22, #d35400);
+      transform: translateY(-2px);
+    }
+    .rover-btn:disabled {
+      background: #7f8c8d; cursor: not-allowed; transform: none;
+    }
+
+    .firstaid-btn {
+      background: linear-gradient(45deg, #2ecc71, #27ae60);
+      margin-left: 1rem;
+    }
+    .firstaid-btn:hover {
+      background: linear-gradient(45deg, #27ae60, #1e8449);
+      transform: translateY(-2px);
+    }
+    .firstaid-btn:disabled {
+      background: #7f8c8d; cursor: not-allowed; transform: none;
+    }
+
+    .status-text {
+      margin-top: 0.75rem; font-style: italic; opacity: 0.8;
+      color: #ecf0f1;
+    }
+
+    @media (max-width: 480px) {
+      .dashboard { padding: 0.5rem; gap: 0.5rem; }
+      .header h1 { font-size: 1.5rem; }
+      .panel-title { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🚨 Emergency Monitoring Dashboard</h1>
+    <p>Active Response & Control Hub for Emergency Reconnaissance</p>
+    <h2>Base 1</h2>
+  </div>
+
+  <div id="connectionStatus" class="status-indicator connected">
+    🟢 Connected
+  </div>
+
+  <div class="dashboard">
+    <div class="emergency-panel">
+      <h2 class="panel-title">Emergency Alerts</h2>
+      <div id="emergencyStatus" class="emergency-status normal">
+        <div class="normal-status">🟢 All stations normal</div>
+      </div>
+    </div>
+
+    <div class="reports-panel">
+      <h2 class="panel-title">Crime Reports</h2>
+      <div id="reportsContainer" class="reports-container">
+        <div class="no-reports">No reports received</div>
+      </div>
+
+      <div class="rover-controls">
+        <button id="roverBtn" class="rover-btn" onclick="launchRover()">Launch Rover</button>
+        <button id="firstaidBtn" class="firstaid-btn" onclick="dropFirstaid()">Drop Firstaid</button>
+        <div id="roverStatus" class="status-text"></div>
+        <div id="firstaidStatus" class="status-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io(), reports = [];
+
+    socket.on('connect',  () => updateConn(true));
+    socket.on('disconnect',() => updateConn(false));
+    function updateConn(ok) {
+      const el = document.getElementById('connectionStatus');
+      el.textContent = ok ? '🟢 Connected' : '🔴 Disconnected';
+      el.className = `status-indicator ${ok?'connected':'disconnected'}`;
+    }
+
+    socket.on('emergency_alert', data => {
+      const s = document.getElementById('emergencyStatus');
+      s.className = 'emergency-status alert';
+      s.style.color = '#FF0000';
+      s.innerHTML = `
+        <div class="emergency-message">⚠️ ${data.message} ⚠️</div>
+        <div class="emergency-time">Time: ${data.time}</div>
+        <button class="clear-btn" onclick="clearEmergency()">Clear Alert</button>
+      `;
+      playAlertSound();
+    });
+
+    socket.on('firstaid_requested', data => {
+      const s = document.getElementById('emergencyStatus');
+      s.className = 'emergency-status alert';
+      s.style.color = '#2ecc71';
+      s.innerHTML = `
+        <div class="emergency-message"> ${data.message}</div>
+        <div class="emergency-time">Time: ${data.time}</div>
+        <button class="clear-btn" onclick="clearEmergency()">Clear Alert</button>
+      `;
+      playAlertSound();
+    });
+
+
+    socket.on('emergency_cleared', () => {
+      const s = document.getElementById('emergencyStatus');
+      s.className = 'emergency-status normal';
+      s.innerHTML = '<div class="normal-status">🟢 All stations normal</div>';
+    });
+
+    socket.on('new_report', data => {
+      reports.unshift({...data.report, station: data.station});
+      renderReports();
+    });
+    function renderReports() {
+      const c = document.getElementById('reportsContainer');
+      if (!reports.length) {
+        c.innerHTML = '<div class="no-reports">No reports received</div>';
+        return;
+      }
+      c.innerHTML = reports.map(r=>`
+        <div class="report-item">
+          <div class="report-header">
+            <div class="report-title">Report from ${r.station}</div>
+            <div class="report-time">${r.date} at ${r.time}</div>
+          </div>
+          <div class="report-text">${r.text}</div>
+        </div>
+      `).join('');
+    }
+
+    function clearEmergency(){
+      fetch('/clear_emergency',{method:'POST',headers:{'Content-Type':'application/json'}});
+    }
+
+    function launchRover(){
+      const btn = document.getElementById('roverBtn'),
+            st  = document.getElementById('roverStatus');
+      btn.disabled = true; btn.textContent = 'Launching...';
+      st.textContent = 'Rover launch sequence initiated...';
+
+      fetch('/launch_rover',{method:'POST',headers:{'Content-Type':'application/json'}})
+        .then(r=>r.json())
+        .then(d=> {
+          st.textContent = d.status;
+        })
+        .catch(_=> {
+          st.textContent = 'Error launching rover';
+          btn.disabled = false; btn.textContent = 'Launch Rover';
+        });
+    }
+
+    socket.on('rover_launching', data => {
+      const st = document.getElementById('roverStatus');
+      st.textContent = `${data.message} at ${data.time}`;
+    });
+    socket.on('rover_launch_complete', ()=> {
+      const btn = document.getElementById('roverBtn'),
+            st  = document.getElementById('roverStatus');
+      btn.disabled = false; btn.textContent = 'Launch Rover';
+      st.textContent = 'Rover launch completed';
+      setTimeout(()=> st.textContent = '', 3000);
+    });
+
+    function dropFirstaid(){
+      const btn = document.getElementById('firstaidBtn'),
+            st  = document.getElementById('firstaidStatus');
+      btn.disabled = true; btn.textContent = 'Dropping...';
+      st.textContent = 'Firstaid drop initiated...';
+
+      fetch('/drop_firstaid',{method:'POST',headers:{'Content-Type':'application/json'}})
+        .then(r=>r.json())
+        .then(d=> {
+          st.textContent = d.status;
+        })
+        .catch(_=> {
+          st.textContent = 'Error dropping firstaid';
+          btn.disabled = false; btn.textContent = 'Drop Firstaid';
+        });
+    }
+
+    socket.on('firstaid_dropping', data => {
+      const st = document.getElementById('firstaidStatus');
+      st.style.color = '#2ecc71';
+      st.textContent = `🟢 ${data.message} at ${data.time}`;
+    });
+    socket.on('firstaid_drop_complete', ()=> {
+      const btn = document.getElementById('firstaidBtn'),
+            st  = document.getElementById('firstaidStatus');
+      btn.disabled = false; btn.textContent = 'Drop Firstaid';
+      st.textContent = 'Firstaid drop completed';
+      setTimeout(()=> st.textContent = '', 3000);
+    });
+
+    function playAlertSound(){
+      const ctx = new (window.AudioContext||window.webkitAudioContext)(),
+            osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 800; osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3,ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime+0.5);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime+0.5);
+    }
+
+    fetch('/api/status')
+      .then(r=>r.json())
+      .then(d=> {
+        if (d.emergency) {
+          socket.emit('emergency_alert',{ message:'EMERGENCY ON STATION 1', time:d.emergency_time });
+        }
+        reports.splice(0,0,...d.reports.reverse());
+        renderReports();
+      });
+  </script>
+</body>
+</html>
