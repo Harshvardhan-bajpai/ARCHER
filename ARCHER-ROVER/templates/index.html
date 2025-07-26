@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Archer Rover Control</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body { 
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d3a 50%, #1e2a3a 100%);
+      color: #ffffff;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 2rem 0;
+      position: relative;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 1200px;
+      width: 100%;
+      padding: 0 2rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 27px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+    }
+
+    h1 {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.5px;
+    }
+
+    .department-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      color: white;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .operational-status {
+      font-size: 0.9rem;
+      color: #10b981;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 0.8fr 3fr 0.8fr;
+      gap: 1.5rem;
+      align-items: start;
+      margin-bottom: 2rem;
+    }
+
+    .video-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .video-header {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 8px 8px 0 0;
+      padding: 0.8rem 1.5rem;
+      width: 100%;
+      text-align: center;
+      font-weight: 600;
+      color: #e2e8f0;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .video-container {
+      position: relative;
+      border: 2px solid rgba(59, 130, 246, 0.4);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      overflow: hidden;
+      background: #000;
+      box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.3),
+        0 0 50px rgba(59, 130, 246, 0.1);
+    }
+
+    img {
+      display: block;
+      width: 100%;
+      max-width: 1000px;
+      height: auto;
+      border: none;
+    }
+
+    .control-instructions {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .control-instructions h3 {
+      color: #3b82f6;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .instructions-text {
+      color: #e2e8f0;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .key-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 0.8rem 0;
+    }
+
+    .key-highlight {
+      display: inline-block;
+      background: #374151;
+      color: #f9fafb;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid #4b5563;
+      border-radius: 4px;
+      font-family: 'Roboto Mono', monospace;
+      font-weight: 500;
+      font-size: 0.9rem;
+      min-width: 35px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .system-status {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .system-status h3 {
+      color: #3b82f6;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-list {
+      list-style: none;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+      color: #e2e8f0;
+      font-size: 0.9rem;
+    }
+
+    .status-item:last-child {
+      border-bottom: none;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+      animation: statusBlink 2s ease-in-out infinite;
+    }
+
+    @keyframes statusBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .control-reference {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 8px;
+      padding: 2rem;
+      margin-top: 2rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .control-reference h3 {
+      color: #3b82f6;
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .control-group {
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid rgba(71, 85, 105, 0.2);
+      border-radius: 6px;
+      padding: 1.2rem;
+    }
+
+    .control-group h4 {
+      color: #f1f5f9;
+      font-weight: 600;
+      margin-bottom: 0.8rem;
+      font-size: 1rem;
+    }
+
+    .control-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.4rem 0;
+      color: #cbd5e1;
+      font-size: 0.9rem;
+    }
+
+    .control-item .key {
+      background: #374151;
+      padding: 0.2rem 0.6rem;
+      border-radius: 3px;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.8rem;
+      color: #f9fafb;
+      min-width: 25px;
+      text-align: center;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(71, 85, 105, 0.3);
+      color: #94a3b8;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 1024px) {
+      .main-content {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      .video-section {
+        order: -1;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 1rem;
+      }
+
+      body {
+        padding: 1rem 0;
+      }
+
+      .control-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .key-group {
+        justify-content: center;
+      }
+    }
+
+    .video-container:focus-within {
+      border-color: #3b82f6;
+      box-shadow:
+        0 10px 25px rgba(0, 0, 0, 0.3),
+        0 0 50px rgba(59, 130, 246, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h3>ARCHER Control System</h3>
+      <div class="operational-status">● System Operational</div>
+    </div>
+
+    <div class="main-content" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
+      <div class="video-section">
+        <div class="video-header">Live Video Feed - Rover 01</div>
+        <div class="video-container">
+          <img src="{{ url_for('video_feed') }}" width="640" height="480" alt="Rover 01 Feed" />
+        </div>
+      </div>
+
+      <div class="video-section">
+        <div class="video-header">Aiming Video Feed</div>
+        <div class="video-container">
+          <img src="{{ url_for('video_feed2') }}" width="640" height="480" alt="Rover 02 Feed" />
+        </div>
+      </div>
+    </div>
+
+    <div class="control-reference">
+      <h3>Control Reference Guide</h3>
+      <div class="control-grid">
+        <div class="control-group">
+          <h4>Movement Controls</h4>
+          <div class="control-item">
+            <span>Forward</span>
+            <span class="key">W</span>
+          </div>
+          <div class="control-item">
+            <span>Backward</span>
+            <span class="key">S</span>
+          </div>
+          <div class="control-item">
+            <span>Turn Left</span>
+            <span class="key">A</span>
+          </div>
+          <div class="control-item">
+            <span>Turn Right</span>
+            <span class="key">D</span>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h4>Special Functions</h4>
+          <div class="control-item">
+            <span>Gimbal Down</span>
+            <span class="key">G</span>
+          </div>
+          <div class="control-item">
+            <span>Gimbal Up</span>
+            <span class="key">H</span>
+          </div>
+          <div class="control-item">
+            <span>Emergency Stop</span>
+            <span class="key">X</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Active Response & Control Hub for Emergency Reconnaissance</p>
+      <p>ARCHER v1</p>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/control.js') }}"></script>
+</body>
+</html>
