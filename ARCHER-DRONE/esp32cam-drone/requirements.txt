@@ -1,0 +1,4 @@
+WiFi.h
+ESPAsyncWebServer
+esp_camera
+ESP32Servo

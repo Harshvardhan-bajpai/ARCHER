@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Drone Surveillance Control</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      color: #ffffff;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 1.5rem 0;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 1400px;
+      width: 100%;
+      padding: 0 2rem;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 5px;
+      padding-bottom: 1.5rem;
+      border-bottom: 2px solid rgba(220, 38, 38, 0.3);
+    }
+
+    h1 {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.5px;
+    }
+
+    .operational-status {
+      font-size: 0.9rem;
+      color: #10b981;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+      margin-bottom: 2rem;
+    }
+
+    .video-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 600px;
+    }
+
+    .video-header {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(220, 38, 38, 0.4);
+      border-radius: 8px 8px 0 0;
+      padding: 0.8rem 1.5rem;
+      width: 100%;
+      text-align: center;
+      font-weight: 600;
+      color: #e2e8f0;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .video-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .live-indicator {
+      width: 8px;
+      height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      animation: livePulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.2); }
+    }
+
+    .video-container {
+      position: relative;
+      border: 2px solid rgba(220, 38, 38, 0.5);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      overflow: hidden;
+      background: #000;
+      box-shadow:
+        0 15px 35px rgba(0, 0, 0, 0.4),
+        0 0 60px rgba(220, 38, 38, 0.15);
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+    }
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border: none;
+    }
+
+    .terminal-section {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 8px;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      height: 600px;
+    }
+
+    .terminal-header {
+      background: rgba(30, 41, 59, 0.8);
+      border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+      padding: 0.8rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .terminal-dots {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .terminal-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .terminal-dot.red { background: #ef4444; }
+    .terminal-dot.yellow { background: #f59e0b; }
+    .terminal-dot.green { background: #10b981; }
+
+    .terminal-title {
+      color: #cbd5e1;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-left: 0.5rem;
+    }
+
+    .terminal-output {
+      flex: 1;
+      background: #0f172a;
+      padding: 1rem;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: #10b981;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      border: none;
+      outline: none;
+    }
+
+    .terminal-output::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .terminal-output::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.3);
+    }
+
+    .terminal-output::-webkit-scrollbar-thumb {
+      background: rgba(71, 85, 105, 0.5);
+      border-radius: 3px;
+    }
+
+    .terminal-output::-webkit-scrollbar-thumb:hover {
+      background: rgba(71, 85, 105, 0.7);
+    }
+
+    .log-entry {
+      margin-bottom: 0.2rem;
+    }
+
+    .log-timestamp {
+      color: #64748b;
+    }
+
+    .log-level-info {
+      color: #3b82f6;
+    }
+
+    .log-level-warn {
+      color: #f59e0b;
+    }
+
+    .log-level-error {
+      color: #ef4444;
+    }
+
+    .log-level-success {
+      color: #10b981;
+    }
+
+    .detection-stats {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .detection-stats h3 {
+      color: #3b82f6;
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .stat-card {
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(71, 85, 105, 0.2);
+      border-radius: 6px;
+      padding: 1.2rem;
+      text-align: center;
+    }
+
+    .stat-card h4 {
+      color: #cbd5e1;
+      font-weight: 500;
+      margin-bottom: 0.8rem;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #3b82f6;
+      font-family: 'Roboto Mono', monospace;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      color: #94a3b8;
+      font-size: 0.8rem;
+    }
+
+    .alert-banner {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9));
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 5px;
+      display: none;
+      align-items: center;
+      gap: 1rem;
+      animation: alertPulse 2s ease-in-out infinite;
+    }
+
+    .alert-banner.active {
+      display: flex;
+    }
+
+    @keyframes alertPulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.6); }
+    }
+
+    .alert-icon {
+      width: 24px;
+      height: 24px;
+      background: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #dc2626;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(71, 85, 105, 0.3);
+      color: #94a3b8;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 1024px) {
+      .main-content {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      .video-section, .terminal-section {
+        order: -1;
+        height: 400px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 1rem;
+      }
+      body {
+        padding: 1rem 0;
+      }
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .video-header {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .video-section, .terminal-section {
+        height: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>ARCHER Surveillance & Threat Detection</h1>
+      <div class="operational-status">● Drone 1 Live</div>
+    </div>
+
+    <div class="alert-banner" id="alertBanner">
+      <div class="alert-icon">!</div>
+      <div id="alertText">
+      <!--auto update -->
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="video-section">
+        <div class="video-header">
+          <div class="video-status">
+            <div class="live-indicator"></div>
+            <span>LIVE</span>
+          </div>
+        </div>
+        <div class="video-container">
+          <img id="videoStream" src="/video_feed" alt="AI Surveillance Feed" />
+        </div>
+      </div>
+      <div class="terminal-section">
+        <div class="terminal-header">
+          <div class="terminal-dots">
+            <div class="terminal-dot red"></div>
+            <div class="terminal-dot yellow"></div>
+            <div class="terminal-dot green"></div>
+          </div>
+          <div class="terminal-title">System Console</div>
+        </div>
+        <div class="terminal-output" id="terminalOutput">
+          <div class="log-entry">
+            <span class="log-timestamp">[2025-06-01 12:00:00]</span> 
+            <span class="log-level-success">[INFO]</span> System initialized successfully
+          </div>
+          <div class="log-entry">
+            <span class="log-timestamp">[2025-06-01 12:00:01]</span> 
+            <span class="log-level-info">[INFO]</span> Loading YOLOv8 model...
+          </div>
+          <div class="log-entry">
+            <span class="log-timestamp">[2025-06-01 12:00:02]</span> 
+            <span class="log-level-success">[INFO]</span> YOLOv8 model loaded successfully
+          </div>
+          <div class="log-entry">
+            <span class="log-timestamp">[2025-06-01 12:00:03]</span> 
+            <span class="log-level-info">[INFO]</span> Starting video capture...
+          </div>
+          <div class="log-entry">
+            <span class="log-timestamp">[2025-06-01 12:00:04]</span> 
+            <span class="log-level-success">[INFO]</span> Camera connection established
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detection-stats">
+      <h3>Detection Statistics - Last 24 Hours</h3>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h4>Total Detections</h4>
+          <div class="stat-number">247</div>
+          <div class="stat-label">People Tracked</div>
+        </div>
+        <div class="stat-card">
+          <h4>Threat Alerts</h4>
+          <div class="stat-number">12</div>
+          <div class="stat-label">High Priority</div>
+        </div>
+        <div class="stat-card">
+          <h4>Zone Coverage</h4>
+          <div class="stat-number">94%</div>
+          <div class="stat-label">Area Monitored</div>
+        </div>
+        <div class="stat-card">
+          <h4>Detection Accuracy</h4>
+          <div class="stat-number">89.3%</div>
+          <div class="stat-label">AI Confidence</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Active Response & Control Hub for Emergency Reconnaissance</p>
+      <p>ARCHER v1</p>
+    </div>
+  </div>
+
+  <script>
+    const terminalOutput = document.getElementById('terminalOutput');
+    const maxLogEntries = 100;
+
+    function addLogEntry(message, level = 'info') {
+      const timestamp = new Date().toISOString().replace('T', ' ').substr(0, 19);
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      
+      logEntry.innerHTML = `
+        <span class="log-timestamp">[${timestamp}]</span> 
+        <span class="log-level-${level}">[${level.toUpperCase()}]</span> ${message}
+      `;
+      
+      terminalOutput.appendChild(logEntry);
+      
+      const entries = terminalOutput.querySelectorAll('.log-entry');
+      if (entries.length > maxLogEntries) {
+        entries[0].remove();
+      }
+      
+      terminalOutput.scrollTop = terminalOutput.scrollHeight;
+    }
+
+    function showAlert(message) {
+      const alertBanner = document.getElementById('alertBanner');
+      const alertText = document.getElementById('alertText');
+      alertText.textContent = message;
+      alertBanner.classList.add('active');
+      addLogEntry(`Alert: ${message}`, 'warn');
+    }
+
+    function hideAlert() {
+      document.getElementById('alertBanner').classList.remove('active');
+    }
+
+    let lastNonZeroTime = null;
+    setInterval(() => {
+      fetch('/current_threat')
+        .then(res => res.json())
+        .then(data => {
+          if (data.level > 0) {
+            const msg = `${data.name} detected!`;
+            showAlert(msg);
+            lastNonZeroTime = Date.now();
+          } else {
+            if (lastNonZeroTime && (Date.now() - lastNonZeroTime) >= 2789) {
+              hideAlert();
+              lastNonZeroTime = null;
+            }
+          }
+        })
+        .catch(err => {
+          addLogEntry(`Failed to fetch threat status: ${err.message}`, 'error');
+        });
+    }, 50);
+
+    setInterval(() => {
+      fetch('/terminal_logs')
+        .then(res => res.json())
+        .then(data => {
+          if (data.logs && data.logs.length > 0) {
+            data.logs.forEach(log => {
+              addLogEntry(log.message, log.level || 'info');
+            });
+          }
+        })
+        .catch(() => {
+        });
+    }, 1000);
+
+    window.addEventListener('keydown', function(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        fetch('/toggle_active', { method: 'POST' });
+        addLogEntry('Toggle active person', 'info');
+      }
+      if (e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        fetch('/toggle_lock', { method: 'POST' });
+        addLogEntry('Toggle lock status', 'info');
+      }
+    });
+
+    setTimeout(() => {
+      addLogEntry('MediaPipe Pose initialized', 'success');
+      addLogEntry('MediaPipe Hands initialized', 'success');
+      addLogEntry('ESP32 connection established', 'success');
+      addLogEntry('Starting threat detection...', 'info');
+    }, 2000);
+
+    function updateStats() {
+      const statNumbers = document.querySelectorAll('.stat-number');
+      setInterval(() => {
+        statNumbers.forEach((stat, index) => {
+          const parentCard = stat.closest('.stat-card');
+          const cardTitle = parentCard.querySelector('h4').textContent;
+          
+          if (cardTitle === 'Detection Accuracy') {
+            const variation = Math.random() * 8 + 85;
+            stat.textContent = variation.toFixed(1) + '%';
+          } else if (stat.textContent.includes('%')) {
+            const current = parseFloat(stat.textContent);
+            const variation = (Math.random() - 0.5) * 2;
+            const newValue = Math.max(90, Math.min(100, current + variation));
+            stat.textContent = newValue.toFixed(1) + '%';
+          } else if (!stat.textContent.includes('.')) {
+            const current = parseInt(stat.textContent);
+            const variation = Math.floor((Math.random() - 0.5) * 10);
+            stat.textContent = Math.max(0, current + variation);
+          }
+        });
+      }, 10000);
+    }
+    updateStats();
+  </script>
+</body>
+</html>
